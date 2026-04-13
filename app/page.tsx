@@ -6,33 +6,33 @@ const countryEvents: Record<string, { name: string; events: { year: string; titl
   india: {
     name: 'India',
     events: [
-      { year: '1991', title: 'Balance of payments crisis', desc: 'India nearly ran out of foreign reserves. The IMF bailout forced sweeping economic liberalisation — opening markets and reducing tariffs.', delta: '+6% debt spike', up: true },
-      { year: '2008', title: 'Global financial crisis', desc: 'India launched a large fiscal stimulus to shield its economy, boosting public spending at the cost of higher debt.', delta: '+5% over 2 years', up: true },
-      { year: '2020', title: 'Covid-19 pandemic shock', desc: 'The economy contracted 7.3% — the worst since independence. Emergency spending drove debt to its highest level in 40 years.', delta: '+16% in one year', up: true },
+      { year: '1991', title: 'Balance of payments crisis', desc: 'India nearly ran out of foreign reserves. The IMF bailout forced sweeping economic liberalisation.', delta: '+6% debt spike', up: true },
+      { year: '2008', title: 'Global financial crisis', desc: 'India launched a large fiscal stimulus, boosting public spending at the cost of higher debt.', delta: '+5% over 2 years', up: true },
+      { year: '2020', title: 'Covid-19 pandemic shock', desc: 'The economy contracted 7.3%. Emergency spending drove debt to its highest level in 40 years.', delta: '+16% in one year', up: true },
     ]
   },
   usa: {
     name: 'United States',
     events: [
-      { year: '2001', title: '9/11 & War on Terror', desc: 'Military spending surged after the September 11 attacks. Two simultaneous wars in Afghanistan and Iraq added trillions to the national debt.', delta: '+8% over 4 years', up: true },
-      { year: '2008', title: 'Financial crisis & bank bailouts', desc: 'The subprime mortgage collapse triggered the worst recession since the 1930s. TARP and stimulus added $1.4 trillion in a single year.', delta: '+29% in 3 years', up: true },
-      { year: '2020', title: 'Covid relief spending', desc: 'The CARES Act and subsequent packages totalled over $5 trillion — the largest peacetime fiscal expansion in US history.', delta: '+25% in one year', up: true },
+      { year: '2001', title: '9/11 & War on Terror', desc: 'Military spending surged. Two simultaneous wars added trillions to the national debt.', delta: '+8% over 4 years', up: true },
+      { year: '2008', title: 'Financial crisis & bank bailouts', desc: 'The subprime collapse triggered the worst recession since the 1930s. TARP added $1.4 trillion in a year.', delta: '+29% in 3 years', up: true },
+      { year: '2020', title: 'Covid relief spending', desc: 'The CARES Act totalled over $5 trillion — the largest peacetime fiscal expansion in US history.', delta: '+25% in one year', up: true },
     ]
   },
   greece: {
     name: 'Greece',
     events: [
-      { year: '2001', title: 'Joined the Eurozone', desc: 'Greece adopted the euro, gaining access to cheap credit. Government borrowing exploded — much of it hidden through financial engineering.', delta: 'Structural shift', up: true },
-      { year: '2010', title: 'Sovereign debt crisis', desc: 'Greece revealed its deficit was double official figures. The EU/IMF bailout came with brutal austerity, sparking riots across Athens.', delta: '+41% in 5 years', up: true },
-      { year: '2018', title: 'Exit from bailout programme', desc: 'After 8 years of austerity, Greece exited its third bailout. Primary surpluses returned but debt remained the highest in the EU.', delta: '-15% gradual fall', up: false },
+      { year: '2001', title: 'Joined the Eurozone', desc: 'Greece adopted the euro, gaining access to cheap credit. Government borrowing exploded.', delta: 'Structural shift', up: true },
+      { year: '2010', title: 'Sovereign debt crisis', desc: 'Greece revealed its deficit was double official figures. The EU/IMF bailout came with brutal austerity.', delta: '+41% in 5 years', up: true },
+      { year: '2018', title: 'Exit from bailout programme', desc: 'After 8 years of austerity, Greece exited its third bailout. Debt remained the highest in the EU.', delta: '-15% gradual fall', up: false },
     ]
   },
   japan: {
     name: 'Japan',
     events: [
-      { year: '1991', title: 'Asset bubble collapse', desc: 'Stock and real estate prices crashed. Japan entered a "Lost Decade" of stagnation, forcing massive government stimulus spending.', delta: '+66% over 10 years', up: true },
-      { year: '2011', title: 'Tōhoku earthquake & tsunami', desc: 'The most expensive natural disaster in history cost $360 billion. Reconstruction added to Japan\'s already record-high debt.', delta: '+24% over 3 years', up: true },
-      { year: '2013', title: '"Abenomics" launched', desc: 'PM Abe\'s bold three-arrow strategy — monetary easing, fiscal spending, structural reform — aimed to end deflation but added more debt.', delta: 'Structural programme', up: true },
+      { year: '1991', title: 'Asset bubble collapse', desc: 'Stock and real estate prices crashed. Japan entered a "Lost Decade" of stagnation.', delta: '+66% over 10 years', up: true },
+      { year: '2011', title: 'Tōhoku earthquake & tsunami', desc: 'The most expensive natural disaster in history cost $360 billion. Reconstruction added massively to debt.', delta: '+24% over 3 years', up: true },
+      { year: '2013', title: '"Abenomics" launched', desc: "PM Abe's bold three-arrow strategy aimed to end deflation but added more debt.", delta: 'Structural programme', up: true },
     ]
   }
 };
@@ -41,13 +41,28 @@ export default function Home() {
   const [selected, setSelected] = useState('india');
   const [chartData, setChartData] = useState<{year: string; debt: number}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [narration, setNarration] = useState('');
+  const [narrating, setNarrating] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setNarration('');
     fetch(`/api/debt?country=${selected}`)
       .then(res => res.json())
-      .then(data => { setChartData(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(data => {
+        setChartData(data);
+        setLoading(false);
+        // Auto-generate narration
+        setNarrating(true);
+        fetch('/api/narrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country: countryEvents[selected].name, data }),
+        })
+          .then(res => res.json())
+          .then(d => { setNarration(d.narration); setNarrating(false); })
+          .catch(() => setNarrating(false));
+      });
   }, [selected]);
 
   const country = countryEvents[selected];
@@ -77,6 +92,23 @@ export default function Home() {
               {val.name}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* AI Narration Box */}
+      <div className="max-w-4xl mx-auto px-6 mb-8">
+        <div className="bg-blue-950 border border-blue-800 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-blue-400 text-xs font-medium uppercase tracking-widest">AI Narration</span>
+          </div>
+          {narrating ? (
+            <p className="text-blue-200 text-sm leading-relaxed animate-pulse">Generating story...</p>
+          ) : narration ? (
+            <p className="text-blue-100 text-sm leading-relaxed">{narration}</p>
+          ) : (
+            <p className="text-blue-400 text-sm">Loading...</p>
+          )}
         </div>
       </div>
 
